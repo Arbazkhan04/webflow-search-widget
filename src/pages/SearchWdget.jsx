@@ -1,26 +1,35 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import SearchModal from "./SearchModal";
 import { useDisclosure } from "@chakra-ui/react";
 import { search } from "../apiManager/search";
 import { getSearchPreference } from "../apiManager/setting";
+import SearchResultPage from "./SearchResultPage";
+import {
+  searchFromCollections,
+  searchFromProducts,
+  searchFromPages,
+} from "../apiManager/search";
+
 
 const SearchWidget = () => {
+  const DEBOUNCE_DELAY = 500; // Delay in milliseconds
   const [query, setQuery] = useState("");
+  const [results, setResults] = useState({ products: [], collections: [], pages: [] });
+  const [isLoading, setIsLoading] = useState(false);
+  const [instanceIsLoading, setInstanceIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState([]); // State to hold search results
   const [searchPreference, setSearchPreference] = useState(null); // State to hold search preferences
+  const [showResults, setShowResults] = useState(false); // State to toggle results display
 
   const { isOpen, onClose, onOpen } = useDisclosure();
-
 
   useEffect(() => {
     const fetchSearchPreference = async () => {
       const userId = "6767d5c65ac4ffa5809355f3";
       const siteId = "6768b69f5fe75864249a7ce5";
-
       try {
         const preferences = await getSearchPreference(userId, siteId);
         setSearchPreference(preferences?.data);
-        console.log("Search Preferences:", preferences?.data);
       } catch (error) {
         console.error("Error fetching search preferences:", error);
       }
@@ -33,46 +42,80 @@ const SearchWidget = () => {
     const userId = "6767d5c65ac4ffa5809355f3";
     const siteId = "6768b69f5fe75864249a7ce5";
 
+    setInstanceIsLoading(true); // Set loading state to true
+
     try {
       // Call the search API
       const data = await search(searchQuery, userId, siteId);
 
       // Update search results state
       setSearchResults(data?.data);
-
-      console.log("Search API Response:", data?.data);
     } catch (error) {
       console.error("Error calling search API:", error);
+    } finally {
+      setInstanceIsLoading(false); // Set loading state to false
     }
   };
 
+  // Debounced version of handleSearch
+  const debouncedSearch = useCallback(
+    debounce((searchQuery) => {
+      handleSearch(searchQuery);
+    }, DEBOUNCE_DELAY),
+    []
+  );
   const handleInputChange = (e) => {
     const value = e.target.value;
     setQuery(value);
 
-    // Trigger API call if the query length is 3 or more
-    if (value.length >= 3) {
-      handleSearch(value);
+    // Call the debounced search function
+    debouncedSearch(value);
+  };
+
+  const fuzzySearch = searchPreference?.searchEngineSettings?.fuzzySearch;
+  const siteId = searchPreference?.siteId;
+  const collectionIds = searchPreference?.searchFrom?.collections || [];
+  const searchResultLayout = searchPreference?.searchResultPageCustomization?.searchResultLayout || "";
+
+  const handleSearchButtonClick = () => {
+    if (query.length >= 3) {
+      fetchAllResults(query, fuzzySearch, siteId, collectionIds)
+      setShowResults(true); // Show results only when the button is clicked
+    }
+    onClose()
+  };
+
+  const handleCloseResults = () => {
+    setShowResults(false);
+    setQuery(""); // Optionally clear the query
+    setSearchResults([]); // Optionally clear results
+  };
+
+  const fetchAllResults = async (query, fuzzySearch, siteId, collectionIds) => {
+
+    setIsLoading(true);
+    try {
+      const page = 1; // Set your pagination page
+      const pageSize = 3; // Set your pagination size
+      // const collectionIds = ["6768b6a05fe75864249a7d99", "6768b6a05fe75864249a7d6b"];
+
+      const [products, collections, pages] = await Promise.all([
+        searchFromProducts(siteId, query, fuzzySearch, page, pageSize),
+        searchFromCollections(collectionIds, query, fuzzySearch, page, pageSize),
+        searchFromPages(siteId, query, fuzzySearch, page, pageSize),
+      ]);
+
+      setResults({ products, collections, pages });
+    } catch (error) {
+      console.error("Error during initial search:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: "30px",
-        right: 0,
-        background: "#fff",
-        padding: "10px",
-        zIndex: 1000,
-        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-        alignItems: "end",
-        width: "40%",
-      }}
-    >
-      {/* Pass the query and other props to SearchModal */}
-      {
-        searchPreference?.searchEngineSettings?.instantSearchWidget &&
+    <div className="w-full">
+      {searchPreference?.searchEngineSettings?.instantSearchWidget && (
         <SearchModal
           isOpen={isOpen}
           onClose={onClose}
@@ -82,41 +125,63 @@ const SearchWidget = () => {
           searchQuery={query}
           setSearchQuery={setQuery}
           initialQuery={query} // Pass query as initialQuery
-          instantSearchWidgetCustomization={searchPreference?.instantSearchWidgetCustomization}
+          instantSearchWidgetCustomization={
+            searchPreference?.instantSearchWidgetCustomization
+          }
+          handleSearchButtonClick={handleSearchButtonClick}
+          handleInputChange={handleInputChange}
+          instanceIsLoading={instanceIsLoading}
         />
-      }
+      )}
 
-      <input
-        type="text"
-        value={query}
-        onChange={handleInputChange}
-        placeholder="Search..."
-        onClick={() => {
-          onOpen();
-        }}
-        style={{
-          padding: "10px",
-          width: "75%",
-          borderRadius: "4px",
-          border: "1px solid #ccc",
-        }}
-      />
-      <button
-        onClick={() => handleSearch(query)}
-        style={{
-          padding: "10px",
-          marginLeft: "10px",
-          borderRadius: "4px",
-          background: "#007BFF",
-          color: "#fff",
-          border: "none",
-          cursor: "pointer",
-        }}
-      >
-        Search
-      </button>
+      {/* Input and Search Button */}
+      <div className="flex w-full mt-2 md:w-1/2 mx-auto items-center">
+        <input
+          type="text"
+          value={query}
+          onChange={handleInputChange}
+          placeholder="Search..."
+          onClick={() => {
+            onOpen();
+          }}
+          className="w-full flex-grow px-4 py-3 h-12 border border-gray-300 rounded-l-xl text-lg outline-none"
+        />
+        <button
+          onClick={handleSearchButtonClick}
+          className="px-4 py-3 h-12 bg-blue-600 text-white rounded-r-xl flex items-center justify-center hover:bg-blue-700"
+        >
+          Search
+        </button>
+      </div>
+
+      {/* Conditionally Render Search Results */}
+      {showResults && (
+        <SearchResultPage
+          searchResults={searchResults}  // Pass results to the SearchResultPage
+          searchQuery={query}
+          handleSearchButtonClick={handleSearchButtonClick}
+          fetchAllResults={fetchAllResults}
+          setIsLoading={setIsLoading}
+          results={results}
+          setResults={setResults}
+          isLoading={isLoading}
+          fuzzySearch={fuzzySearch}
+          siteId={siteId}
+          collectionIds={collectionIds}
+          searchResultLayout={searchResultLayout}
+        />
+      )}
     </div>
   );
 };
 
+
+// Utility debounce function
+function debounce(func, wait) {
+  let timeout;
+  return function (...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
 export default SearchWidget;

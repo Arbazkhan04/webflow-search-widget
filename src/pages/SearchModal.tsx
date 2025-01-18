@@ -26,23 +26,25 @@ const SearchModal = ({
   handleSearch,
   searchQuery,
   setSearchQuery,
-  isLoading,
   instantSearchWidgetCustomization,
+  handleSearchButtonClick,
+  handleInputChange,
+  instanceIsLoading
 }) => {
-  const handleInputChange = (e) => {
-    const value = e.target.value || ""; // Default to empty string
-    setSearchQuery(value);
+  // const handleInputChange = (e) => {
+  //   const value = e.target.value || ""; // Default to empty string
+  //   setSearchQuery(value);
 
-    if (value.trim().length >= 3) {
-      handleSearch(value.trim());
-    }
-  };
+  //   if (value.trim().length >= 3) {
+  //     handleSearch(value.trim());
+  //   }
+  // };
 
-  const handleSearchButtonClick = () => {
-    if ((searchQuery || "").trim().length >= 3) {
-      handleSearch(searchQuery.trim());
-    }
-  };
+  // const handleSearchButtonClick = () => {
+  //   if ((searchQuery || "").trim().length >= 3) {
+  //     handleSearch(searchQuery.trim());
+  //   }
+  // };
 
   const isOneColumnLayout =
     instantSearchWidgetCustomization?.searchResultLayout === "one-column";
@@ -79,12 +81,13 @@ const SearchModal = ({
               Search
             </Button>
           </Flex>
-
-          {isLoading && (
-            <Spinner size="lg" thickness="4px" color="blue.500" mt={4} mb={4} />
+          {instanceIsLoading && (
+            <div className="flex justify-center items-center h-full">
+              <Spinner size="lg" thickness="4px" color="blue.500" mt={4} mb={4} />
+            </div>
           )}
 
-          {!isLoading && searchResults.length > 0 ? (
+          {!instanceIsLoading && searchResults.length > 0 ? (
             <Grid
               templateAreas={
                 isOneColumnLayout
@@ -118,7 +121,10 @@ const SearchModal = ({
                     Products
                   </Text>
                   <Divider borderColor="gray.300" />
-                  <Box>
+                  <Grid
+                    templateColumns="repeat(2, 1fr)" // Defines 2 equal columns
+                    gap={2} // Adds spacing between grid items
+                  >
                     {searchResults
                       .find((category) => category.searchFrom === "Products")
                       ?.results.map((result, index) => (
@@ -132,15 +138,15 @@ const SearchModal = ({
                           cursor="pointer"
                           alignItems="center"
                           gap={4}
-                          mb={2}
+                          mb={0}
                         >
                           <Text fontWeight="medium">
                             {result?.fieldData?.name || "Unnamed Product"}
                           </Text>
                         </Flex>
                       ))}
-                  </Box>
-                  <Text
+                  </Grid>
+                  {/* <Text
                     pb={4}
                     fontSize="sm"
                     fontWeight="bold"
@@ -152,7 +158,7 @@ const SearchModal = ({
                     }}
                   >
                     View all products →
-                  </Text>
+                  </Text> */}
                 </VStack>
               </GridItem>
 
@@ -181,7 +187,7 @@ const SearchModal = ({
                       <Divider borderColor="gray.300" mb={2} />
                       {searchResults
                         .find(
-                          (category) => category.searchFrom === "Collections"
+                          (category) => category.searchFrom === "Collection Items"
                         )
                         ?.results.map((result, index) => (
                           <Text key={index} fontWeight="medium" mb={2}>
@@ -205,7 +211,7 @@ const SearchModal = ({
                         .find((category) => category.searchFrom === "Pages")
                         ?.results.map((result, index) => (
                           <Text key={index} fontWeight="medium" mb={2}>
-                            {result?.fieldData?.name || "Unnamed Page"}
+                            {result?.pageTitle || "Unnamed Page"}
                           </Text>
                         ))}
                     </Box>
@@ -214,7 +220,7 @@ const SearchModal = ({
               )}
             </Grid>
           ) : (
-            !isLoading && (
+            !instanceIsLoading && (
               <Text mt={4} fontSize="lg" color="gray.500">
                 No results found.
               </Text>

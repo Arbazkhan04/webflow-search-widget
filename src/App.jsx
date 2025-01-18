@@ -1,5 +1,4 @@
 import SearchWidget from "./pages/SearchWdget";
-
 const App = () => {
   return <SearchWidget />;
 };
