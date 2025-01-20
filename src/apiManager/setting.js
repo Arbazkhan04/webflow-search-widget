@@ -7,3 +7,11 @@ export const getSearchPreference = async (userId, siteId) => {
     return res.data;
 };
 
+export const getTopSearchTerms = async (userId, siteId, limit = 5) => {
+    const res = await api.get('/searchTermsManagementRoutes/getTopSearchTerms', {
+        params: { userId, siteId, limit },
+    });
+    return res.data;
+};
+
+

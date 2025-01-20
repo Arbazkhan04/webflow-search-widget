@@ -29,7 +29,9 @@ const SearchModal = ({
   instantSearchWidgetCustomization,
   handleSearchButtonClick,
   handleInputChange,
-  instanceIsLoading
+  instanceIsLoading,
+  searchTerms,
+  InstanceSuggestedSearchTerms
 }) => {
   // const handleInputChange = (e) => {
   //   const value = e.target.value || ""; // Default to empty string
@@ -76,7 +78,7 @@ const SearchModal = ({
               mt={1}
               colorScheme="blue"
               onClick={handleSearchButtonClick}
-              isDisabled={(searchQuery || "").trim().length < 3}
+              isDisabled={(searchQuery || "").trim().length <= 0}
             >
               Search
             </Button>
@@ -87,7 +89,7 @@ const SearchModal = ({
             </div>
           )}
 
-          {!instanceIsLoading && searchResults.length > 0 ? (
+          {!instanceIsLoading && searchResults.some(category => category.results.length > 0) ? (
             <Grid
               templateAreas={
                 isOneColumnLayout
@@ -220,10 +222,57 @@ const SearchModal = ({
               )}
             </Grid>
           ) : (
-            !instanceIsLoading && (
-              <Text mt={4} fontSize="lg" color="gray.500">
-                No results found.
-              </Text>
+            !instanceIsLoading && searchResults.every(category => category.results.length === 0) && (
+              <>
+                <Text mb={4} mt={4} ml={1} fontSize="sm" color="gray.500">
+                  No results found.
+                </Text>
+                {/* Suggessted term show */}
+                {
+                  InstanceSuggestedSearchTerms &&
+                  <Box ml={1}>
+                    <div className="flex justify-center items-center">
+                      <Text
+                        fontSize="lg"
+                        fontWeight="bold"
+                        color="blue.600"
+                        textTransform="uppercase"
+                        mb={2}
+                      >
+                        Suggessted Terms
+                      </Text>
+                    </div>
+                    <Divider borderColor="gray.300" mb={4} />
+
+
+                    <div className="flex gap-4 justify-center items-center flex-wrap">
+                      {searchTerms.map((term, index) => (
+                        <Text
+                          key={index}
+                          fontWeight="medium"
+                          mb={2}
+                          px={4}
+                          py={2}
+                          border="1px"
+                          borderColor="blue.500"
+                          borderRadius="lg"
+                          color="blue.600"
+                          cursor="pointer"
+                          _hover={{ bg: "blue.500", color: "white" }}
+                          transition="all 0.2s"
+                          onClick={() => {
+                            // Append the term to the search query
+                            setSearchQuery(term?.term || "Unnamed Collection");
+                          }}
+
+                        >
+                          {term?.term || "Unnamed Collection"}
+                        </Text>
+                      ))}
+                    </div>
+                  </Box>
+                }
+              </>
             )
           )}
         </ModalBody>

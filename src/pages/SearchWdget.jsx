@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import SearchModal from "./SearchModal";
 import { useDisclosure } from "@chakra-ui/react";
 import { search } from "../apiManager/search";
-import { getSearchPreference } from "../apiManager/setting";
+import { getSearchPreference, getTopSearchTerms } from "../apiManager/setting";
 import SearchResultPage from "./SearchResultPage";
 import {
   searchFromCollections,
@@ -18,6 +18,7 @@ const SearchWidget = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [instanceIsLoading, setInstanceIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState([]); // State to hold search results
+  const [searchTerms, setSearchTerms] = useState([]); // State to hold search results
   const [searchPreference, setSearchPreference] = useState(null); // State to hold search preferences
   const [showResults, setShowResults] = useState(false); // State to toggle results display
 
@@ -25,22 +26,25 @@ const SearchWidget = () => {
 
   useEffect(() => {
     const fetchSearchPreference = async () => {
-      const userId = "678c00d9fcab62852e37fc3e";
-      const siteId = "5e3663117aa7cfa521a446db";
+      const userId = "678d3af66bca9dceb1ffe3a7";
+      const siteId = "6768b69f5fe75864249a7ce5";
       try {
         const preferences = await getSearchPreference(userId, siteId);
         setSearchPreference(preferences?.data);
+
+        // Fetching top search terms
+        const searchTerms = await getTopSearchTerms(userId, siteId, 5);
+        setSearchTerms(searchTerms?.data); // Assuming you have a state for top search terms
       } catch (error) {
         console.error("Error fetching search preferences:", error);
       }
     };
-
     fetchSearchPreference();
   }, []); // Fetch search preferences on component mount
 
   const handleSearch = async (searchQuery) => {
-    const userId = "678c00d9fcab62852e37fc3e";
-    const siteId = "5e3663117aa7cfa521a446db";
+    const userId = "678d3af66bca9dceb1ffe3a7";
+    const siteId = "6768b69f5fe75864249a7ce5";
 
     setInstanceIsLoading(true); // Set loading state to true
 
@@ -67,18 +71,19 @@ const SearchWidget = () => {
   const handleInputChange = (e) => {
     const value = e.target.value;
     setQuery(value);
-
     // Call the debounced search function
     debouncedSearch(value);
   };
+  // console.log("searchPreference", searchPreference);
 
   const fuzzySearch = searchPreference?.searchEngineSettings?.fuzzySearch;
   const siteId = searchPreference?.siteId;
   const collectionIds = searchPreference?.searchFrom?.collections || [];
   const searchResultLayout = searchPreference?.searchResultPageCustomization?.searchResultLayout || "";
-
+  const InstanceSuggestedSearchTerms = searchPreference?.instantSearchWidgetCustomization.suggestedSearchTerms || "";
+  const SearchSuggestedSearchTerms = searchPreference?.searchResultPageCustomization.suggestedSearchTerms || "";
   const handleSearchButtonClick = () => {
-    if (query.length >= 3) {
+    if (query.length >= 0) {
       fetchAllResults(query, fuzzySearch, siteId, collectionIds)
       setShowResults(true); // Show results only when the button is clicked
     }
@@ -131,6 +136,8 @@ const SearchWidget = () => {
           handleSearchButtonClick={handleSearchButtonClick}
           handleInputChange={handleInputChange}
           instanceIsLoading={instanceIsLoading}
+          searchTerms={searchTerms}
+          InstanceSuggestedSearchTerms={InstanceSuggestedSearchTerms}
         />
       )}
 
@@ -159,6 +166,7 @@ const SearchWidget = () => {
         <SearchResultPage
           searchResults={searchResults}  // Pass results to the SearchResultPage
           searchQuery={query}
+          setSearchQuery={setQuery}
           handleSearchButtonClick={handleSearchButtonClick}
           fetchAllResults={fetchAllResults}
           setIsLoading={setIsLoading}
@@ -169,6 +177,9 @@ const SearchWidget = () => {
           siteId={siteId}
           collectionIds={collectionIds}
           searchResultLayout={searchResultLayout}
+          SearchSuggestedSearchTerms={SearchSuggestedSearchTerms}
+          searchTerms={searchTerms}
+
         />
       )}
     </div>

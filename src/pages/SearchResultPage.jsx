@@ -4,8 +4,9 @@ import {
     searchFromProducts,
     searchFromPages,
 } from "../apiManager/search";
+import { Box, Divider, Text } from "@chakra-ui/react";
 
-const SearchResultPage = ({ searchQuery, setIsLoading, setResults, fetchAllResults, results, isLoading, fuzzySearch, siteId, collectionIds, searchResultLayout }) => {
+const SearchResultPage = ({ searchQuery, setIsLoading, setResults, fetchAllResults, results, isLoading, fuzzySearch, siteId, collectionIds, searchResultLayout, SearchSuggestedSearchTerms, setSearchQuery, searchTerms }) => {
     const [activeTab, setActiveTab] = useState("Collections");
     const [viewMode, setViewMode] = useState("grid"); // Options: "grid", "list"
     const [currentPage, setCurrentPage] = useState(1);
@@ -18,7 +19,7 @@ const SearchResultPage = ({ searchQuery, setIsLoading, setResults, fetchAllResul
         setIsLoading(true);
         try {
             const page = 1;
-            const pageSize = 3;
+            const pageSize = 6;
 
             let data = [];
             if (tab === "Products") {
@@ -114,6 +115,46 @@ const SearchResultPage = ({ searchQuery, setIsLoading, setResults, fetchAllResul
                 ) : (
                     <p className="text-gray-500 text-center col-span-full">
                         No results found for "{searchQuery}".
+                        {
+                            !SearchSuggestedSearchTerms && <Box ml={1}>
+                                <div className="flex justify-center mt-20 items-center">
+                                    <Text
+                                        fontSize="lg"
+                                        fontWeight="bold"
+                                        color="blue.600"
+                                        textTransform="uppercase"
+                                        mb={2}
+                                    >
+                                        Suggessted Terms
+                                    </Text>
+                                </div>
+
+                                <div className="flex gap-4 mt-4 justify-center items-center flex-wrap">
+                                    {searchTerms?.map((term, index) => (
+                                        <Text
+                                            key={index}
+                                            fontWeight="medium"
+                                            mb={2}
+                                            px={4}
+                                            py={2}
+                                            border="1px"
+                                            borderColor="blue.500"
+                                            borderRadius="lg"
+                                            color="blue.600"
+                                            cursor="pointer"
+                                            _hover={{ bg: "blue.500", color: "white" }}
+                                            transition="all 0.2s"
+                                            onClick={() => {
+                                                // Append the term to the search query
+                                                setSearchQuery(term?.term || "Unnamed Collection");
+                                            }}
+                                        >
+                                            {term?.term || "Unnamed Collection"}
+                                        </Text>
+                                    ))}
+                                </div>
+                            </Box>
+                        }
                     </p>
                 )}
             </main>
