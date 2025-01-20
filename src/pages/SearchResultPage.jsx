@@ -116,7 +116,7 @@ const SearchResultPage = ({ searchQuery, setIsLoading, setResults, fetchAllResul
                     <p className="text-gray-500 text-center col-span-full">
                         No results found for "{searchQuery}".
                         {
-                            !SearchSuggestedSearchTerms && <Box ml={1}>
+                            SearchSuggestedSearchTerms && <Box ml={1}>
                                 <div className="flex justify-center mt-20 items-center">
                                     <Text
                                         fontSize="lg"
